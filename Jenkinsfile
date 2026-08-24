@@ -109,35 +109,17 @@ pipeline
               script {
                  echo "getting new instance ip "
 
-                 def NEW_IP = "";
-                 echo "marker-jmeter-01";
+                  def FindInstancePublicIP = "aws --region us-east-1 ec2 describe-instances --filters 'Name=tag:build_id,Values=${amiNameTagValue}' --query 'Reservations[].Instances[].PublicIpAddress' --output text"
 
-                 def FindInstancePublicIP = "";
+                  echo "IP lookup command is: ${FindInstancePublicIP}"
 
-                 FindInstancePublicIP =  "aws --region us-east-1  ec2 describe-instances --filters \\\'Name=tag:build_id,Values=\\\"TAG_TO_REPLACE\\\"\\\' | grep -i PublicIpAddress | awk '{print \$2 }' | awk '{print substr(\$1,2); }' | awk '{print substr(\$1, 1, length(\$1)-2)}'";
+                  def NEW_IP = sh(
+                      script: FindInstancePublicIP,
+                      returnStdout: true
+                  ).trim()
 
-                 echo "Original string is :   ${FindInstancePublicIP} ";
-
-                 echo "updating to: ${amiNameTagValue} ";
-                 def badString;
-                 def goodString;
-                 badString = "\\\\";
-                 goodString = "";
-
-                 FindInstancePublicIP =  FindInstancePublicIP.replaceAll("TAG_TO_REPLACE","${amiNameTagValue}");
-                 echo "updated string is :   ${FindInstancePublicIP} ";
-
-
-                 FindInstancePublicIP =  FindInstancePublicIP.replaceAll("${badString}", "${goodString}");
-                 echo "final string is :   ${FindInstancePublicIP} ";
-
-                 NEW_IP = sh (returnStdout: true, script: "eval ${FindInstancePublicIP}");
-                 echo "New IP is ${NEW_IP}";
-
-                 NEW_IP = NEW_IP.replaceAll("[\r\n]+","");
-
-                 echo "New IP is ${NEW_IP}";
-                 echo "";
+                  echo "New IP is ${NEW_IP}"
+                  echo ""
 
                  def filenew = readFile('test-plan.jmx').replaceAll("localhost","${NEW_IP}")
                  writeFile file:'./test-plan.jmx', text: filenew
